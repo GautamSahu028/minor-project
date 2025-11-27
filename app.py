@@ -460,16 +460,29 @@ These metrics summarize how well the classifier and meta-detector perform across
         # 1. Confusion Matrix
         with st.expander("1️⃣ Confusion Matrix (Meta-Detector Performance)"):
             st.write("""
-            **What this shows:**  
-            The confusion matrix compares the meta-detector's predicted labels vs. the true labels  
-            (0 = clean, 1 = adversarial).
+            ### 🔍 What This Graph Shows  
+            This confusion matrix summarizes **how accurately the meta-detector distinguishes clean vs. adversarial samples**.
 
-            **How to read:**  
-            - **Top-left (True Negative):** Clean samples correctly recognized  
-            - **Top-right (False Positive):** Clean samples incorrectly flagged as adversarial  
-            - **Bottom-left (False Negative):** Adversarial samples missed  
-            - **Bottom-right (True Positive):** Adversarial samples correctly detected  
+            ### 🧠 How to Read It  
+            - **Rows = Actual label (ground truth)**  
+            • Row 0 → clean samples  
+            • Row 1 → adversarial samples  
+            - **Columns = Predicted label (meta-detector output)**  
+            • Column 0 → predicted clean  
+            • Column 1 → predicted adversarial  
+
+            ### 📌 Interpretation of Each Cell  
+            - **Top-Left (TN):** Clean samples correctly classified as clean  
+            - **Top-Right (FP):** Clean samples incorrectly marked as adversarial  
+            - **Bottom-Left (FN):** Adversarial samples not detected (model failed to flag)  
+            - **Bottom-Right (TP):** Adversarial samples correctly flagged  
+
+            ### 🎯 Why This Matters  
+            This matrix tells you **exactly where the meta-detector succeeds or fails**, and whether errors come primarily from:  
+            - false alarms (FP) → too sensitive  
+            - missed attacks (FN) → not sensitive enough  
             """)
+
             fig, ax = plt.subplots(figsize=(5, 5))
             sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
             ax.set_title("Meta-Model Confusion Matrix")
@@ -480,16 +493,28 @@ These metrics summarize how well the classifier and meta-detector perform across
         # 2. Meta-Model Score Distribution
         with st.expander("2️⃣ Meta-Model Score Distribution"):
             st.write("""
-            **Purpose:**  
-            Visualizes how clean vs adversarial samples distribute across meta-model scores.
+            ### 🔍 What This Graph Shows  
+            This histogram shows how **meta-detector scores are distributed** for clean vs. adversarial samples.  
+            The meta-model assigns a numeric score indicating how “suspicious” an input looks.
 
-            **Interpretation:**  
-            - Clean inputs cluster at **lower scores**  
-            - Adversarial inputs shift to the **right (higher scores)**  
-            - The dashed line is the **decision threshold**:  
-              - Score > threshold → flagged as adversarial  
-              - Score < threshold → considered clean
+            ### 🧠 How to Interpret Scores  
+            - **Low score → behaves like normal / clean input**  
+            - **High score → looks abnormal → likely adversarial**  
+
+            You will see **two distinct clusters**:  
+            - 🟩 Clean samples (left side)  
+            - 🟥 Adversarial samples (right side)
+
+            ### 📌 Decision Boundary  
+            The **vertical dashed line** is the optimal threshold:  
+            - Score > threshold → flagged as adversarial  
+            - Score < threshold → accepted as clean  
+
+            ### 🎯 Why This Matters  
+            This plot visually demonstrates how effectively the meta-model **separates clean and attacked samples**.  
+            Good separation = strong adversarial detection.
             """)
+
             fig, ax = plt.subplots(figsize=(8, 5))
             ax.hist(scores_c, bins=50, alpha=0.6, color="green", label="Clean")
             ax.hist(scores_a, bins=50, alpha=0.6, color="red", label="Adversarial")
@@ -503,13 +528,24 @@ These metrics summarize how well the classifier and meta-detector perform across
         # 3. UMAP of Triplet Embeddings
         with st.expander("3️⃣ UMAP of Triplet Embeddings"):
             st.write("""
-            **What this shows:**  
-            A 2D visualization of the meta-feature embeddings learned by the triplet network.
+            ### 🔍 What This Graph Shows  
+            UMAP is a dimensionality-reduction technique that lets us visualize high-dimensional meta-features in **2D space**.
 
-            **What to infer:**  
-            - Clean samples should form more compact pockets  
-            - Adversarial samples often spread and overlap — indicating embedding distortion  
+            Each point represents one sample after passing through the Triplet Network, which learns to pull similar samples together and push different ones apart.
+
+            ### 🧠 What the Colors Mean  
+            - 🟩 Clean samples  
+            - 🟥 Adversarial samples  
+
+            ### 📌 Interpretation  
+            - **Clean points form tighter, more consistent clusters**, which means their internal classifier signals are stable.  
+            - **Adversarial points tend to scatter, form separate pockets, or overlap inconsistently**, showing that attacks distort internal model behavior.
+
+            ### 🎯 Why This Matters  
+            This visualization proves that adversarial examples **look very different internally**, even when their raw input changes are tiny.  
+            It confirms that the Triplet Network successfully learned meaningful discriminatory embeddings.
             """)
+
             try:
                 all_trip = np.vstack([clean_trip, adv_trip])
                 labels_trip = np.array([0]*len(clean_trip) + [1]*len(adv_trip))
@@ -531,13 +567,24 @@ These metrics summarize how well the classifier and meta-detector perform across
         # 4. Per-Class Clean Accuracy
         with st.expander("4️⃣ Per-Class Clean Accuracy"):
             st.write("""
-            **What this shows:**  
-            How accurately the classifier predicts each PBMC cell cluster **without attack**.
+            ### 🔍 What This Graph Shows  
+            This bar chart displays the classifier’s **accuracy on each PBMC cell cluster** under normal (clean) conditions.
 
-            **Interpretation:**  
-            - Higher bars → class is easy to classify  
-            - Lower bars → class is difficult / noisy
+            ### 🧠 How to Interpret  
+            - **High bar → the classifier handles this class well**  
+            - **Low bar → the model struggles with this class**  
+                - could be due to class similarity  
+                - low representation in dataset  
+                - overlapping gene signatures  
+
+            ### 🎯 Why This Matters  
+            This graph identifies which biological cell types are the **most reliably recognized** and which ones may require:  
+            - more data  
+            - better feature selection  
+            - different model design  
+            to improve performance.
             """)
+
             fig, ax = plt.subplots(figsize=(7, 4))
             ax.bar(range(len(class_acc)), class_acc)
             ax.set_title("Per-Class Clean Accuracy")
@@ -549,13 +596,25 @@ These metrics summarize how well the classifier and meta-detector perform across
         # 5. Per-Class Flip Rate
         with st.expander("5️⃣ Per-Class Flip Rate (Adversarial Vulnerability)"):
             st.write("""
-            **Purpose:**  
-            Indicates how easily each cluster gets fooled by adversarial perturbations (computed on the evaluation subset).
+            ### 🔍 What This Graph Shows  
+            Flip rate measures **how easily each class gets fooled by adversarial attacks**.
 
-            **Interpretation:**  
-            - Flip rate = 1.0 → almost always fooled  
-            - Flip rate = 0.0 → robust to attack  
+            For each class:  
+            - We check how often an adversarial PGD perturbation makes the classifier change its prediction.
+
+            ### 🧠 How to Interpret  
+            - **High flip rate (near 1.0):**  
+            Model is extremely vulnerable for this class.  
+            - **Moderate flip rate:**  
+            Model is somewhat sensitive—attacks sometimes work.  
+            - **Low flip rate (near 0.0):**  
+            Class is robust; attacks rarely fool it.
+
+            ### 🎯 Why This Matters  
+            Different cell types may have different margins separating them in PCA/gene space.  
+            This plot reveals **biological classes that are naturally more adversarially fragile** and need more robust modeling.
             """)
+
             fig, ax = plt.subplots(figsize=(7, 4))
             # replace nan with 0 for plotting but indicate missing with hatch
             plot_rates = np.nan_to_num(flip_rates, nan=0.0)
@@ -571,15 +630,26 @@ These metrics summarize how well the classifier and meta-detector perform across
         # 6. ROC Curve + Threshold Calibration
         with st.expander("6️⃣ ROC Curve & Threshold Calibration"):
             st.write("""
-            **Purpose:**  
-            Shows how well the meta-detector separates clean vs. adversarial samples  
-            at all possible thresholds.
+            ### 🔍 What This Graph Shows  
+            The ROC curve shows how well the meta-detector separates clean vs. adversarial samples across **all possible thresholds**.
 
-            **How to read:**  
-            - **AUC** closer to 1 → excellent detector  
-            - **Diagonal line** → random guessing  
-            - Red dot → threshold where (TPR - FPR) is maximized (Youden's J)
+            ### 🧠 Key Elements  
+            - **TPR (True Positive Rate):** How many adversarial samples are caught  
+            - **FPR (False Positive Rate):** How many clean samples are mistakenly flagged  
+            - **AUC:**  
+            - 1.0 → perfect detector  
+            - 0.5 → random guessing  
+
+            ### 📌 Optimal Threshold  
+            The **red dot** marks the threshold that maximizes  
+            **Youden's J = TPR - FPR**, giving the best trade-off between catching attacks and avoiding false alarms.
+
+            ### 🎯 Why This Matters  
+            This graph validates whether your meta-detector is actually useful:  
+            - A steep ROC curve with high AUC → strong separation  
+            - A shallow curve → weak or unreliable detector  
             """)
+
             fig, ax = plt.subplots(figsize=(8, 6))
             ax.plot(fpr, tpr, linewidth=3, label=f"ROC Curve (AUC = {roc_auc:.2f})")
             ax.plot([0, 1], [0, 1], linestyle="--", label="Random Baseline")
